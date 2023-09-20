@@ -1,23 +1,49 @@
 <?php
-require_once "vendor/autoload.php";
+use PayPal\Rest\ApiContext;
+use PayPal\Auth\OAuthTokenCredential;
 
-use Omnipay\Omnipay;
+require './autoload.php';
 
-define('CLIENT_ID', 'ATHwBeH162fRC3PkhQdW3kvcPEuRwAoMNXzoBUmqXjeqwuFbWsmi0TFmVGUz3BeG_aIYMT1yjbDdJNjY');
-define('CLIENT_SECRET', 'EJRtNeJQSS5h-83BODuYMS2HcHS8ecOZo-KdL8sgwiOUjR-naGTASDz2IPRTxYBqAFnGQ499j0EiX6TX');
+// For test payments we want to enable the sandbox mode. If you want to put live
+// payments through then this setting needs changing to `false`.
+$enableSandbox = true;
 
-define('PAYPAL_RETURN_URL', 'http://localhost/paypal/success.php');
-define('PAYPAL_CANCEL_URL', 'http://localhost/paypal/cancel.php');
-define('PAYPAL_CURRENCY', 'USD'); // set your currency here
+// PayPal settings. Change these to your account details and the relevant URLs
+// for your site.
+$paypalConfig = [
+    'client_id' => 'ATHwBeH162fRC3PkhQdW3kvcPEuRwAoMNXzoBUmqXjeqwuFbWsmi0TFmVGUz3BeG_aIYMT1yjbDdJNjY',
+    'client_secret' => 'EJRtNeJQSS5h-83BODuYMS2HcHS8ecOZo-KdL8sgwiOUjR-naGTASDz2IPRTxYBqAFnGQ499j0EiX6TX',
+    'return_url' => 'http://localhost/.../response.php',
+    'cancel_url' => 'http://localhost/profit/payment-cancelled.html'
+];
 
-// Connect with the database
-$db = new mysqli('localhost', 'root', '', 'paypal'); 
+// Database settings. Change these for your database configuration.
+$dbConfig = [
+    'host' => 'localhost',
+    'username' => 'root',
+    'password' => '',
+    'name' => 'mydb'
+];
 
-if ($db->connect_errno) {
-    die("Connect failed: ". $db->connect_error);
+$apiContext = getApiContext($paypalConfig['client_id'], $paypalConfig['client_secret'], $enableSandbox);
+
+/**
+ * Set up a connection to the API
+ *
+ * @param string $clientId
+ * @param string $clientSecret
+ * @param bool   $enableSandbox Sandbox mode toggle, true for test payments
+ * @return \PayPal\Rest\ApiContext
+ */
+function getApiContext($clientId, $clientSecret, $enableSandbox = false)
+{
+    $apiContext = new ApiContext(
+        new OAuthTokenCredential($clientId, $clientSecret)
+    );
+
+    $apiContext->setConfig([
+        'mode' => $enableSandbox ? 'sandbox' : 'live'
+    ]);
+
+    return $apiContext;
 }
-
-$gateway = Omnipay::create('PayPal_Rest');
-$gateway->setClientId(CLIENT_ID);
-$gateway->setSecret(CLIENT_SECRET);
-$gateway->setTestMode(true); //set it to 'false' when go live
